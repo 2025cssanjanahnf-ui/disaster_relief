@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+
+{% block title %}Request #{{ relief_request.id }} - Disaster Relief Details{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.35rem;">
+      <h1 class="page-title">Emergency Request #{{ relief_request.id }}</h1>
+      <span class="badge badge-{{ relief_request.urgency.lower() }}">{{ relief_request.urgency }} Urgency</span>
+      <span class="badge badge-{{ 'escalated' if relief_request.status == 'Escalated' else 'delivered' if relief_request.status == 'Delivered' else 'pending' if relief_request.status == 'Pending' else 'approved' if relief_request.status == 'Approved' else 'transit' if relief_request.status == 'In Transit' else 'allocated' }}">
+        {{ relief_request.status }}
+      </span>
+    </div>
+    <p class="page-subtitle">Submitted by <strong>{{ relief_request.requester.username }}</strong> &bull; Waiting time: <strong>{{ relief_request.waiting_time_display }}</strong></p>
+  </div>
+  <div class="page-actions">
+    <a href="/requests" class="btn btn-secondary">&larr; Back to Requests</a>
+    {% if is_admin and relief_request.status not in ['Delivered', 'Rejected', 'Escalated'] %}
+    <form action="/requests/{{ relief_request.id }}/escalate" method="POST" style="display: inline;">
+      <button type="submit" class="btn btn-secondary" style="color: var(--color-critical); border-color: var(--color-critical-border);" data-confirm="Escalate this request to top priority?">
+        🚨 Escalate Request
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Escalation Alert Banner if Escalated -->
+{% if relief_request.status == 'Escalated' %}
+<div class="alert alert-danger" style="border-width: 2px;">
+  <span class="alert-icon" style="font-size: 1.4rem;">🚨</span>
+  <div>
+    <strong style="font-size: 1rem;">CRITICAL UNATTENDED REQUEST ESCALATED</strong>
+    <p style="margin-top: 0.2rem;">
+      This critical request has been unattended for <strong>{{ relief_request.waiting_time_display }}</strong> and has exceeded the timeout threshold. Immediate administrative intervention and resource allocation are required.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+<!-- Workflow Progression Timeline -->
+<div class="card" style="margin-bottom: 1.5rem;">
+  <div class="card-body" style="padding: 1.25rem 1.5rem;">
+    <h3 style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-subtle); margin-bottom: 1rem;">
+      Relief Lifecycle Timeline
+    </h3>
+    <div class="workflow-tracker">
+      <!-- Step 1: Emergency Request -->
+      <div class="workflow-step {% if relief_request.status != 'Rejected' %}completed{% endif %}">
+        <div class="workflow-dot">✓</div>
+        <div class="workflow-step-name">1. Requested</div>
+      </div>
+
+      <!-- Step 2: Priority & Approval -->
+      <div class="workflow-step {% if relief_request.status in ['Approved', 'Resource Allocated', 'Delivery Assigned', 'In Transit', 'Delivered'] %}completed{% elif relief_request.status in ['Pending', 'Escalated'] %}active{% endif %}">
+        <div class="workflow-dot">2</div>
+        <div class="workflow-step-name">2. Approved</div>
+      </div>
+
+      <!-- Step 3: Resource Allocation -->
+      <div class="workflow-step {% if relief_request.status in ['Resource Allocated', 'Delivery Assigned', 'In Transit', 'Delivered'] %}completed{% elif relief_request.status == 'Approved' %}active{% endif %}">
+        <div class="workflow-dot">3</div>
+        <div class="workflow-step-name">3. Allocated</div>
+      </div>
+
+      <!-- Step 4: Delivery Assignment -->
+      <div class="workflow-step {% if relief_request.status in ['Delivery Assigned', 'In Transit', 'Delivered'] %}completed{% elif relief_request.status == 'Resource Allocated' %}active{% endif %}">
+        <div class="workflow-dot">4</div>
+        <div class="workflow-step-name">4. Assigned</div>
+      </div>
+
+      <!-- Step 5: In Transit -->
+      <div class="workflow-step {% if relief_request.status in ['In Transit', 'Delivered'] %}completed{% elif relief_request.status == 'Delivery Assigned' %}active{% endif %}">
+        <div class="workflow-dot">5</div>
+        <div class="workflow-step-name">5. In Transit</div>
+      </div>
+
+      <!-- Step 6: Delivered -->
+      <div class="workflow-step {% if relief_request.status == 'Delivered' %}completed{% endif %}">
+        <div class="workflow-dot">{% if relief_request.status == 'Delivered' %}✓{% else %}6{% endif %}</div>
+        <div class="workflow-step-name">6. Delivered</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1.3fr 1fr; gap: 1.5rem;">
+  
+  <!-- Left Column: Request Details -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Emergency Request Information</h2>
+        <span class="badge badge-{{ relief_request.priority_level.lower() }}">
+          {{ relief_request.priority_level }} (Score: {{ relief_request.priority_score }})
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="detail-grid">
+          <div>
+            <div class="detail-item-label">Resource Item</div>
+            <div class="detail-item-value">{{ relief_request.resource.name }}</div>
+          </div>
+          <div>
+            <div class="detail-item-label">Category</div>
+            <div class="detail-item-value">{{ relief_request.resource.category }}</div>
+          </div>
+          <div>
+            <div class="detail-item-label">Requested Quantity</div>
+            <div class="detail-item-value" style="font-size: 1.2rem; color: var(--color-primary);">
+              {{ relief_request.requested_quantity }} units
+            </div>
+          </div>
+          <div>
+            <div class="detail-item-label">Urgency Classification</div>
+            <div class="detail-item-value">{{ relief_request.urgency }}</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+          <div class="detail-item-label">Affected Location / Destination</div>
+          <div class="detail-item-value" style="font-weight: 500;">
+            📍 {{ relief_request.location }}
+          </div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+          <div class="detail-item-label">Situation Description & Field Notes</div>
+          <div style="background-color: #f8fafc; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 0.85rem; font-size: 0.92rem; line-height: 1.5; color: var(--color-text-main);">
+            {{ relief_request.description or 'No extra notes provided.' }}
+          </div>
+        </div>
+
+        <div style="margin-top: 1rem; font-size: 0.82rem; color: var(--color-text-subtle);">
+          Submitted: {{ relief_request.created_at.strftime('%Y-%m-%d %H:%M UTC') }} &bull;
+          Last Updated: {{ relief_request.updated_at.strftime('%Y-%m-%d %H:%M UTC') }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Delivery Details (if assigned) -->
+    {% if relief_request.delivery %}
+    <div class="card" style="border-left: 4px solid var(--color-primary);">
+      <div class="card-header">
+        <h2 class="card-title">Assigned Delivery & Dispatch</h2>
+        <span class="badge badge-{{ 'delivered' if relief_request.delivery.status == 'Delivered' else 'transit' if relief_request.delivery.status == 'In Transit' else 'allocated' }}">
+          {{ relief_request.delivery.status }}
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="detail-grid">
+          <div>
+            <div class="detail-item-label">Assigned Personnel / Driver</div>
+            <div class="detail-item-value">👤 {{ relief_request.delivery.assigned_to }}</div>
+          </div>
+          <div>
+            <div class="detail-item-label">Vehicle Information</div>
+            <div class="detail-item-value">🚚 {{ relief_request.delivery.vehicle_details }}</div>
+          </div>
+          <div>
+            <div class="detail-item-label">Dispatch Time</div>
+            <div class="detail-item-value">{{ relief_request.delivery.assigned_at.strftime('%Y-%m-%d %H:%M UTC') }}</div>
+          </div>
+          <div>
+            <div class="detail-item-label">Delivered Time</div>
+            <div class="detail-item-value">
+              {% if relief_request.delivery.delivered_at %}
+              {{ relief_request.delivery.delivered_at.strftime('%Y-%m-%d %H:%M UTC') }}
+              {% else %}
+              <span style="color: var(--color-text-subtle);">Pending Delivery</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        {% if is_admin and relief_request.delivery.status != 'Delivered' %}
+        <div style="margin-top: 1.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          {% if relief_request.delivery.status == 'Assigned' %}
+          <form action="/deliveries/{{ relief_request.delivery.id }}/status" method="POST">
+            <input type="hidden" name="new_status" value="In Transit">
+            <button type="submit" class="btn btn-primary btn-sm">
+              🚚 Mark In Transit
+            </button>
+          </form>
+          {% endif %}
+          <form action="/deliveries/{{ relief_request.delivery.id }}/status" method="POST">
+            <input type="hidden" name="new_status" value="Delivered">
+            <button type="submit" class="btn btn-success btn-sm" data-confirm="Confirm that supplies have been handed over at the affected location?">
+              ✓ Confirm Delivered
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Right Column: Admin Actions & Resource Matching -->
+  <div>
+    {% if is_admin %}
+    
+    <!-- Admin Decision Controls (Pending / Escalated) -->
+    {% if relief_request.status in ['Pending', 'Escalated'] %}
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Administrative Decision</h2>
+      </div>
+      <div class="card-body">
+        <p style="font-size: 0.88rem; color: var(--color-text-muted); margin-bottom: 1rem;">
+          Review the request urgency, verify affected coordinates, and decide whether to approve or reject.
+        </p>
+        <div style="display: flex; gap: 0.75rem;">
+          <form action="/requests/{{ relief_request.id }}/approve" method="POST" style="flex: 1;">
+            <button type="submit" class="btn btn-primary btn-block">
+              ✓ Approve Request
+            </button>
+          </form>
+          <button type="button" class="btn btn-secondary" style="color: var(--color-critical);" onclick="document.getElementById('rejectFormBox').style.display='block';">
+            ✕ Reject
+          </button>
+        </div>
+
+        <!-- Reject Box (hidden by default) -->
+        <div id="rejectFormBox" style="display: none; margin-top: 1rem; border-top: 1px solid var(--color-border); padding-top: 1rem;">
+          <form action="/requests/{{ relief_request.id }}/reject" method="POST">
+            <div class="form-group">
+              <label class="form-label" for="reject_reason">Reason for Rejection</label>
+              <input type="text" id="reject_reason" name="reason" class="form-control" placeholder="e.g. Duplicate station, non-emergency item..." required>
+            </div>
+            <button type="submit" class="btn btn-danger btn-sm" data-confirm="Are you sure you want to reject this emergency request?">
+              Confirm Rejection
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Resource Matching & Allocation Card (Approved, Pending, or Escalated) -->
+    {% if relief_request.status in ['Pending', 'Approved', 'Escalated'] %}
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Available Inventory Matching</h2>
+      </div>
+      <div class="card-body">
+        <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 1rem;">
+          Match request with nearest warehouse or depot with sufficient available quantity:
+        </p>
+
+        {% if matching_resources %}
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          {% for match in matching_resources %}
+          {% set res = match.resource %}
+          <div class="matching-card {% if match.has_sufficient_stock and match.is_location_match %}best-match{% endif %}">
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                <strong>{{ res.name }}</strong>
+                {% if match.is_location_match %}
+                <span class="badge badge-approved" style="font-size: 0.7rem;">Location Match</span>
+                {% endif %}
+                {% if match.has_sufficient_stock %}
+                <span class="badge badge-pending" style="font-size: 0.7rem;">Stock Available</span>
+                {% else %}
+                <span class="badge badge-high" style="font-size: 0.7rem;">Insufficient Stock</span>
+                {% endif %}
+              </div>
+              <div style="font-size: 0.8rem; color: var(--color-text-subtle); margin-top: 0.2rem;">
+                Depot: {{ res.location }} &bull; Available: <strong>{{ res.quantity_available }}</strong> units
+              </div>
+            </div>
+
+            <div>
+              {% if match.has_sufficient_stock %}
+              <form action="/requests/{{ relief_request.id }}/allocate" method="POST">
+                <input type="hidden" name="allocated_resource_id" value="{{ res.id }}">
+                <button type="submit" class="btn btn-primary btn-sm" data-confirm="Allocate {{ relief_request.requested_quantity }} units from {{ res.location }}?">
+                  Allocate Stock &rarr;
+                </button>
+              </form>
+              {% else %}
+              <button type="button" class="btn btn-secondary btn-sm" disabled title="Insufficient stock in this warehouse (Needed: {{ relief_request.requested_quantity }}, Have: {{ res.quantity_available }})">
+                Stock Low
+              </button>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+          <span class="alert-icon">⚠️</span>
+          <div>No matching resource inventory found in the catalog.</div>
+        </div>
+        <a href="/resources/create" class="btn btn-secondary btn-sm">+ Add Resource to Catalog</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Assign Delivery Form (Resource Allocated) -->
+    {% if relief_request.status == 'Resource Allocated' %}
+    <div class="card" style="border-left: 4px solid var(--color-primary);">
+      <div class="card-header">
+        <h2 class="card-title">Assign Delivery & Dispatch</h2>
+      </div>
+      <div class="card-body">
+        <p style="font-size: 0.88rem; color: var(--color-text-muted); margin-bottom: 1rem;">
+          Stock has been allocated. Assign driver/personnel and transport vehicle details to initiate transit:
+        </p>
+
+        <form action="/requests/{{ relief_request.id }}/assign-delivery" method="POST">
+          <div class="form-group">
+            <label for="assigned_to" class="form-label">Personnel / Driver Name <span class="required">*</span></label>
+            <input
+              type="text"
+              id="assigned_to"
+              name="assigned_to"
+              class="form-control"
+              placeholder="e.g. Officer Anita Roy (Relief Unit Bravo)"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="vehicle_details" class="form-label">Vehicle Details <span class="required">*</span></label>
+            <input
+              type="text"
+              id="vehicle_details"
+              name="vehicle_details"
+              class="form-control"
+              placeholder="e.g. 4x4 Rescue Truck HR-26-9011"
+              required
+            >
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top: 1rem;">
+            Assign & Dispatch Delivery
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Requester Information View -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Tracking Status</h2>
+      </div>
+      <div class="card-body">
+        <p style="font-size: 0.9rem; color: var(--color-text-muted); line-height: 1.6;">
+          Your request is currently in <strong>{{ relief_request.status }}</strong> status.
+          {% if relief_request.status == 'Pending' %}
+          Administrative relief officers are reviewing emergency prioritization and matching warehouse stocks.
+          {% elif relief_request.status == 'Resource Allocated' %}
+          Supplies have been reserved at the warehouse and transport is being assigned.
+          {% elif relief_request.status == 'In Transit' %}
+          Supplies are on the vehicle en route to your station.
+          {% elif relief_request.status == 'Delivered' %}
+          This emergency shipment has been confirmed delivered.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

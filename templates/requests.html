@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Emergency Requests - Disaster Relief Resource Management{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">
+      {% if is_admin %}Emergency Relief Requests{% else %}My Relief Requests{% endif %}
+    </h1>
+    <p class="page-subtitle">
+      {% if is_admin %}
+      Prioritize, review, match inventory, and allocate emergency supplies
+      {% else %}
+      Review status, track delivery progression, and submit new relief requests
+      {% endif %}
+    </p>
+  </div>
+  <div class="page-actions">
+    <a href="/requests/create" class="btn btn-primary">
+      <span>+</span> Create Emergency Request
+    </a>
+  </div>
+</div>
+
+<!-- Search & Filtering Bar -->
+<form method="GET" action="/requests" class="filter-bar">
+  <div class="filter-group" style="flex: 1; min-width: 200px;">
+    <input
+      type="text"
+      name="q"
+      class="form-control"
+      placeholder="Search by location, resource, or description..."
+      value="{{ search_query }}"
+    >
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-label" for="status_filter">Status:</label>
+    <select name="status_filter" id="status_filter" class="form-control" onchange="this.form.submit()">
+      <option value="All" {% if selected_status == 'All' %}selected{% endif %}>All Statuses</option>
+      {% for s in status_choices %}
+      <option value="{{ s }}" {% if selected_status == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-label" for="urgency_filter">Urgency:</label>
+    <select name="urgency_filter" id="urgency_filter" class="form-control" onchange="this.form.submit()">
+      <option value="All" {% if selected_urgency == 'All' %}selected{% endif %}>All Urgencies</option>
+      {% for u in urgency_choices %}
+      <option value="{{ u }}" {% if selected_urgency == u %}selected{% endif %}>{{ u }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <button type="submit" class="btn btn-secondary">Filter</button>
+  {% if search_query or selected_status != 'All' or selected_urgency != 'All' %}
+  <a href="/requests" class="btn btn-secondary" title="Clear Filters">Clear</a>
+  {% endif %}
+</form>
+
+<!-- Requests Table Card -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Active Requests Queue ({{ requests|length }})</h2>
+    <span style="font-size: 0.85rem; color: var(--color-text-subtle);">Sorted by Priority & Urgency</span>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Resource Needed</th>
+            <th>Qty</th>
+            <th>Affected Location</th>
+            <th>Urgency</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Waiting Time</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in requests %}
+          <tr class="{% if req.status == 'Escalated' %}row-escalated{% elif req.urgency == 'Critical' and req.status != 'Delivered' %}row-critical{% endif %}">
+            <td><strong>#{{ req.id }}</strong></td>
+            <td>
+              <strong>{{ req.resource.name }}</strong>
+              <div style="font-size: 0.75rem; color: var(--color-text-subtle);">{{ req.resource.category }}</div>
+            </td>
+            <td><strong>{{ req.requested_quantity }}</strong></td>
+            <td>{{ req.location }}</td>
+            <td>
+              <span class="badge badge-{{ req.urgency.lower() }}">{{ req.urgency }}</span>
+            </td>
+            <td>
+              <span class="badge badge-{{ req.priority_level.lower() }}">
+                {{ req.priority_level }} ({{ req.priority_score }})
+              </span>
+            </td>
+            <td>
+              <span class="badge badge-{{ 'escalated' if req.status == 'Escalated' else 'delivered' if req.status == 'Delivered' else 'pending' if req.status == 'Pending' else 'approved' if req.status == 'Approved' else 'transit' if req.status == 'In Transit' else 'allocated' }}">
+                {{ req.status }}
+              </span>
+            </td>
+            <td>
+              <span style="font-family: var(--font-mono); font-size: 0.85rem;">
+                {{ req.waiting_time_display }}
+              </span>
+            </td>
+            <td style="text-align: right;">
+              <a href="/requests/{{ req.id }}" class="btn {% if req.urgency == 'Critical' and req.status not in ['Delivered', 'Rejected'] %}btn-danger{% else %}btn-secondary{% endif %} btn-sm">
+                {% if is_admin %}Manage &rarr;{% else %}Track &rarr;{% endif %}
+              </a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" style="text-align: center; color: var(--color-text-subtle); padding: 2.5rem;">
+              No requests found matching your filter criteria.<br>
+              <a href="/requests/create" class="btn btn-primary btn-sm" style="margin-top: 0.75rem;">Create Emergency Request</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

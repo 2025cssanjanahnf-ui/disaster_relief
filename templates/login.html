@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Disaster Relief Resource Management{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div style="font-size: 2.2rem; line-height: 1;">⛑</div>
+      <h1>Disaster Relief Portal</h1>
+      <p class="page-subtitle">Centralized emergency response & resource coordination</p>
+    </div>
+
+    <!-- Demo Credentials Box -->
+    <div class="demo-credentials-box">
+      <h4>Demo Credentials (For Evaluation)</h4>
+      <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+        <div>
+          <strong>Admin:</strong> <code>admin</code> / <code>admin123</code>
+          &bull; <button type="button" class="demo-fill-btn" onclick="fillCredentials('admin', 'admin123')">Use Admin</button>
+        </div>
+        <div>
+          <strong>Requester:</strong> <code>requester</code> / <code>requester123</code>
+          &bull; <button type="button" class="demo-fill-btn" onclick="fillCredentials('requester', 'requester123')">Use Requester</button>
+        </div>
+      </div>
+    </div>
+
+    <form action="/login" method="POST">
+      <input type="hidden" name="next" value="{{ next or '/dashboard' }}">
+
+      <div class="form-group">
+        <label for="username" class="form-label">Username</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          class="form-control"
+          placeholder="Enter username"
+          value="{{ username or '' }}"
+          required
+          autofocus
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">Password</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          class="form-control"
+          placeholder="Enter password"
+          required
+        >
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top: 1rem;">
+        Sign In to Portal
+      </button>
+    </form>
+
+    <div style="margin-top: 1.5rem; text-align: center; font-size: 0.88rem; color: var(--color-text-muted);">
+      Need a requester account? <a href="/register" style="font-weight: 600;">Register here</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function fillCredentials(u, p) {
+  document.getElementById('username').value = u;
+  document.getElementById('password').value = p;
+}
+</script>
+{% endblock %}

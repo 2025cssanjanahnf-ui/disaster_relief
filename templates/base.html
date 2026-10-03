@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Disaster Relief Resource Management System{% endblock %}</title>
+  <meta name="description" content="Emergency disaster relief resource allocation, prioritization, and delivery coordination system.">
+  <link rel="stylesheet" href="/static/css/style.css">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="/dashboard" class="brand">
+        <span class="brand-icon">⛑</span>
+        <span>DISASTER RELIEF</span>
+      </a>
+
+      {% if current_user %}
+      <nav class="nav-menu">
+        <a href="/dashboard" class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">Dashboard</a>
+        <a href="/requests" class="nav-link {% if request.url.path.startswith('/requests') %}active{% endif %}">
+          {% if current_user.role == 'ADMIN' %}All Requests{% else %}My Requests{% endif %}
+        </a>
+        {% if current_user.role == 'ADMIN' %}
+        <a href="/resources" class="nav-link {% if request.url.path.startswith('/resources') %}active{% endif %}">Resources</a>
+        <a href="/deliveries" class="nav-link {% if request.url.path.startswith('/deliveries') %}active{% endif %}">Deliveries</a>
+        {% else %}
+        <a href="/deliveries" class="nav-link {% if request.url.path.startswith('/deliveries') %}active{% endif %}">Deliveries</a>
+        {% endif %}
+      </nav>
+
+      <div class="nav-user">
+        <div class="user-badge">
+          <span>{{ current_user.username }}</span>
+          <span class="user-role-tag {% if current_user.role == 'ADMIN' %}admin{% endif %}">{{ current_user.role }}</span>
+        </div>
+        <a href="/profile" class="nav-link" title="Profile Settings">Profile</a>
+        <a href="/logout" class="nav-link" title="Log Out" data-confirm="Are you sure you want to log out?">Logout</a>
+      </div>
+      {% else %}
+      <div class="nav-user">
+        <a href="/login" class="nav-link">Login</a>
+        <a href="/register" class="nav-link">Register</a>
+      </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- Offline & Sync Status Banner -->
+  <div id="offlineBanner" class="offline-banner">
+    <span class="alert-icon">⚡</span>
+    <span id="offlineBannerText">Checking connection status...</span>
+    <button type="button" id="manualSyncBtn" class="offline-sync-btn" style="display: none;">Sync Now</button>
+  </div>
+
+  <!-- Toast Notification Container for dynamic alerts -->
+  <div id="toastContainer" style="position: fixed; top: 70px; right: 20px; z-index: 9999; max-width: 380px;"></div>
+
+  <!-- Main Body Content -->
+  <main class="main-content">
+    <!-- Server-rendered Flash Alerts -->
+    {% if success %}
+    <div class="alert alert-success">
+      <span class="alert-icon">✓</span>
+      <div>{{ success }}</div>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="alert alert-danger">
+      <span class="alert-icon">⚠️</span>
+      <div>{{ error }}</div>
+    </div>
+    {% endif %}
+
+    {% if message %}
+    <div class="alert alert-info">
+      <span class="alert-icon">ℹ</span>
+      <div>{{ message }}</div>
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Clean Emergency Platform Footer -->
+  <footer class="app-footer">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+      <div><strong>Disaster Relief Resource Management System</strong> &bull; College CSE Project</div>
+      <div>Rule-Based Priority &bull; Shortage Detection &bull; Offline Sync Enabled</div>
+    </div>
+  </footer>
+
+  <script src="/static/js/app.js"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

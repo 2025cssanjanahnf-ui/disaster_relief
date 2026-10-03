@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_edit %}Edit Resource{% else %}Add Resource{% endif %} - Disaster Relief{% endblock %}
+
+{% block content %}
+<div style="max-width: 650px; margin: 0 auto;">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{% if is_edit %}Update Resource Inventory{% else %}Register New Resource{% endif %}</h1>
+      <p class="page-subtitle">{% if is_edit %}Adjust available stock quantities and depot details{% else %}Add critical supplies to the emergency inventory catalog{% endif %}</p>
+    </div>
+    <div class="page-actions">
+      <a href="/resources" class="btn btn-secondary">&larr; Back to Resources</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <form action="{% if is_edit %}/resources/{{ resource.id }}/edit{% else %}/resources/create{% endif %}" method="POST">
+        
+        <div class="form-group">
+          <label for="name" class="form-label">Resource Name <span class="required">*</span></label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            class="form-control"
+            placeholder="e.g. Bottled Drinking Water (1L)"
+            value="{{ resource.name if resource else '' }}"
+            required
+            autofocus
+          >
+          <span class="form-help">Clear specific name of the item.</span>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="category" class="form-label">Resource Category <span class="required">*</span></label>
+            <select id="category" name="category" class="form-control" required>
+              {% for cat in categories %}
+              <option value="{{ cat }}" {% if resource and resource.category == cat %}selected{% endif %}>
+                {{ cat }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="quantity_available" class="form-label">Available Quantity <span class="required">*</span></label>
+            <input
+              type="number"
+              id="quantity_available"
+              name="quantity_available"
+              class="form-control"
+              min="0"
+              step="1"
+              placeholder="e.g. 500"
+              value="{{ resource.quantity_available if resource else '0' }}"
+              required
+            >
+            <span class="form-help">Current count ready for dispatch.</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="location" class="form-label">Storage Warehouse / Depot Location <span class="required">*</span></label>
+          <input
+            type="text"
+            id="location"
+            name="location"
+            class="form-control"
+            placeholder="e.g. Central Warehouse, Sector 4"
+            value="{{ resource.location if resource else '' }}"
+            required
+          >
+          <span class="form-help">Physical depot, warehouse, or distribution hub.</span>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;">
+          <a href="/resources" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary">
+            {% if is_edit %}Save Changes{% else %}Add Resource to Inventory{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

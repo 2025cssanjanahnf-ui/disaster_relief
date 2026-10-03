@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Disaster Relief Resource Management{% endblock %}
+
+{% block content %}
+
+{% if is_admin %}
+<!-- ====================================================
+     ADMIN DASHBOARD VIEW
+     ==================================================== -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Disaster Relief Operations Dashboard</h1>
+    <p class="page-subtitle">Central emergency coordination, priority matching, and allocation hub</p>
+  </div>
+  <div class="page-actions">
+    <a href="/requests/create" class="btn btn-primary">
+      <span>+</span> Create Emergency Request
+    </a>
+    <a href="/resources/create" class="btn btn-secondary">
+      <span>+</span> Add Resource
+    </a>
+  </div>
+</div>
+
+<!-- Top Summary Cards -->
+<section class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Pending Requests</span>
+    <span class="stat-value">{{ stats.pending }}</span>
+  </div>
+  <div class="stat-card stat-critical">
+    <span class="stat-label">Critical Requests</span>
+    <span class="stat-value">{{ stats.critical }}</span>
+  </div>
+  <div class="stat-card stat-escalated">
+    <span class="stat-label">Escalated Requests</span>
+    <span class="stat-value">{{ stats.escalated }}</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Available Resources</span>
+    <span class="stat-value">{{ stats.available_resources }}</span>
+  </div>
+  <div class="stat-card stat-shortage">
+    <span class="stat-label">Current Shortages</span>
+    <span class="stat-value">{{ stats.shortages }}</span>
+  </div>
+  <div class="stat-card stat-delivered">
+    <span class="stat-label">Delivered Requests</span>
+    <span class="stat-value">{{ stats.delivered }}</span>
+  </div>
+</section>
+
+<!-- 1. Critical & Escalated Requests Section (Highest Priority) -->
+{% if critical_requests %}
+<section class="card" style="border-left: 4px solid var(--color-critical);">
+  <div class="card-header" style="background-color: #fef2f2;">
+    <h2 class="card-title" style="color: var(--color-critical);">
+      <span>🚨</span> Critical & Escalated Emergency Requests (Immediate Action Required)
+    </h2>
+    <span class="badge badge-critical">{{ critical_requests|length }} URGENT</span>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Resource</th>
+            <th>Qty</th>
+            <th>Affected Location</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Waiting Time</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in critical_requests %}
+          <tr class="{% if req.status == 'Escalated' %}row-escalated{% endif %}">
+            <td><strong>#{{ req.id }}</strong></td>
+            <td>
+              <strong>{{ req.resource.name }}</strong>
+              <div style="font-size: 0.75rem; color: var(--color-text-subtle);">{{ req.resource.category }}</div>
+            </td>
+            <td><strong>{{ req.requested_quantity }}</strong></td>
+            <td>{{ req.location }}</td>
+            <td>
+              <span class="badge badge-critical">{{ req.priority_level }} ({{ req.priority_score }})</span>
+            </td>
+            <td>
+              {% if req.status == 'Escalated' %}
+              <span class="badge badge-escalated">ESCALATED</span>
+              {% else %}
+              <span class="badge badge-critical">{{ req.status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <span style="font-family: var(--font-mono); font-weight: 700; color: var(--color-critical);">
+                {{ req.waiting_time_display }}
+              </span>
+            </td>
+            <td>
+              <a href="/requests/{{ req.id }}" class="btn btn-danger btn-sm">
+                Review & Allocate &rarr;
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- 2. Resource Shortage Alerts Section -->
+{% if shortages %}
+<section class="card" style="border-left: 4px solid var(--color-high);">
+  <div class="card-header" style="background-color: #fff7ed;">
+    <h2 class="card-title" style="color: var(--color-high);">
+      <span>⚠️</span> Resource Shortage Alerts
+    </h2>
+    <span class="badge badge-high">{{ shortages|length }} Deficits</span>
+  </div>
+  <div class="card-body">
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+      {% for s in shortages %}
+      <div class="alert alert-warning" style="margin-bottom: 0; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+          <span class="alert-icon">⚠️</span>
+          <div>
+            <strong>{{ s.resource_name }} shortage: {{ s.shortage }} units</strong> at {{ s.location }}
+            <div style="font-size: 0.8rem; color: var(--color-high);">
+              Available Stock: <strong>{{ s.available_quantity }}</strong> &bull; Total Active Demand: <strong>{{ s.expected_demand }}</strong>
+            </div>
+          </div>
+        </div>
+        <a href="/resources/{{ s.resource_id }}/edit" class="btn btn-secondary btn-sm" style="border-color: var(--color-high);">
+          Restock / Edit Inventory
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+  <!-- 3. Recent Requests Table -->
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Recent Emergency Requests</h2>
+      <a href="/requests" class="btn btn-secondary btn-sm">View All ({{ stats.pending + stats.delivered }})</a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Resource</th>
+              <th>Qty</th>
+              <th>Urgency</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for req in recent_requests %}
+            <tr>
+              <td><strong>#{{ req.id }}</strong></td>
+              <td>
+                <strong>{{ req.resource.name }}</strong>
+                <div style="font-size: 0.75rem; color: var(--color-text-subtle);">{{ req.location }}</div>
+              </td>
+              <td>{{ req.requested_quantity }}</td>
+              <td>
+                <span class="badge badge-{{ req.urgency.lower() }}">{{ req.urgency }}</span>
+              </td>
+              <td>
+                <span class="badge badge-{{ 'escalated' if req.status == 'Escalated' else 'delivered' if req.status == 'Delivered' else 'pending' if req.status == 'Pending' else 'approved' if req.status == 'Approved' else 'transit' if req.status == 'In Transit' else 'allocated' }}">
+                  {{ req.status }}
+                </span>
+              </td>
+              <td>
+                <a href="/requests/{{ req.id }}" class="btn btn-secondary btn-sm">Details</a>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--color-text-subtle); padding: 1.5rem;">
+                No emergency requests recorded yet.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Recent Deliveries -->
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Active Deliveries</h2>
+      <a href="/deliveries" class="btn btn-secondary btn-sm">All Deliveries</a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Req #</th>
+              <th>Vehicle / Driver</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for deliv in recent_deliveries %}
+            <tr>
+              <td>
+                <a href="/requests/{{ deliv.request_id }}"><strong>#{{ deliv.request_id }}</strong></a>
+                <div style="font-size: 0.75rem; color: var(--color-text-subtle);">{{ deliv.resource.name }}</div>
+              </td>
+              <td>
+                <div>{{ deliv.vehicle_details }}</div>
+                <div style="font-size: 0.75rem; color: var(--color-text-subtle);">{{ deliv.assigned_to }}</div>
+              </td>
+              <td>
+                <span class="badge badge-{{ 'delivered' if deliv.status == 'Delivered' else 'transit' if deliv.status == 'In Transit' else 'allocated' }}">
+                  {{ deliv.status }}
+                </span>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" style="text-align: center; color: var(--color-text-subtle); padding: 1.5rem;">
+                No active deliveries at this time.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+{% else %}
+<!-- ====================================================
+     REQUESTER DASHBOARD VIEW (Field Teams & Shelters)
+     ==================================================== -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Relief Center Dashboard</h1>
+    <p class="page-subtitle">Submit urgent resource requests and track relief delivery status</p>
+  </div>
+  <div class="page-actions">
+    <a href="/requests/create" class="btn btn-primary btn-lg">
+      <span>+</span> Create Emergency Request
+    </a>
+  </div>
+</div>
+
+<!-- Requester Summary Cards -->
+<section class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">My Active Requests</span>
+    <span class="stat-value">{{ stats.pending }}</span>
+  </div>
+  <div class="stat-card stat-shortage">
+    <span class="stat-label">In Transit / Assigned</span>
+    <span class="stat-value">{{ stats.in_transit }}</span>
+  </div>
+  <div class="stat-card stat-delivered">
+    <span class="stat-label">Delivered Successfully</span>
+    <span class="stat-value">{{ stats.delivered }}</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Total Submitted</span>
+    <span class="stat-value">{{ stats.total }}</span>
+  </div>
+</section>
+
+<!-- My Requests List -->
+<section class="card">
+  <div class="card-header">
+    <h2 class="card-title">My Submitted Requests</h2>
+    <a href="/requests/create" class="btn btn-primary btn-sm">+ New Request</a>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Resource</th>
+            <th>Quantity</th>
+            <th>Location</th>
+            <th>Urgency</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in my_requests %}
+          <tr>
+            <td><strong>#{{ req.id }}</strong></td>
+            <td>
+              <strong>{{ req.resource.name }}</strong>
+              <div style="font-size: 0.75rem; color: var(--color-text-subtle);">{{ req.resource.category }}</div>
+            </td>
+            <td><strong>{{ req.requested_quantity }}</strong></td>
+            <td>{{ req.location }}</td>
+            <td>
+              <span class="badge badge-{{ req.urgency.lower() }}">{{ req.urgency }}</span>
+            </td>
+            <td>
+              <span class="badge badge-{{ req.priority_level.lower() }}">{{ req.priority_level }}</span>
+            </td>
+            <td>
+              <span class="badge badge-{{ 'escalated' if req.status == 'Escalated' else 'delivered' if req.status == 'Delivered' else 'pending' if req.status == 'Pending' else 'approved' if req.status == 'Approved' else 'transit' if req.status == 'In Transit' else 'allocated' }}">
+                {{ req.status }}
+              </span>
+            </td>
+            <td>{{ req.waiting_time_display }} ago</td>
+            <td>
+              <a href="/requests/{{ req.id }}" class="btn btn-secondary btn-sm">Track &rarr;</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" style="text-align: center; color: var(--color-text-subtle); padding: 2rem;">
+              You have not submitted any emergency requests yet.<br>
+              <a href="/requests/create" class="btn btn-primary" style="margin-top: 0.75rem;">Create Your First Request</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- Emergency Guidelines Box -->
+<section class="card" style="background-color: #f8fafc;">
+  <div class="card-body">
+    <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--color-text-main);">
+      📌 Quick Guide for Relief Coordinators
+    </h3>
+    <ul style="padding-left: 1.25rem; font-size: 0.88rem; color: var(--color-text-muted); line-height: 1.6;">
+      <li>Mark requests as <strong>Critical</strong> only when life-threatening medical or severe water deprivation exists.</li>
+      <li>If you lose internet connection, your request will be <strong>cached locally</strong> and auto-synchronized when back online.</li>
+      <li>Double check that a duplicate request hasn't already been filed for your exact camp or sector location.</li>
+    </ul>
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}

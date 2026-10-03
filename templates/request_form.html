@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Create Emergency Request - Disaster Relief Resource Management{% endblock %}
+
+{% block content %}
+<div style="max-width: 680px; margin: 0 auto;">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Submit Emergency Resource Request</h1>
+      <p class="page-subtitle">Central disaster coordination will evaluate priority and match relief stock</p>
+    </div>
+    <div class="page-actions">
+      <a href="/requests" class="btn btn-secondary">&larr; Back to Requests</a>
+    </div>
+  </div>
+
+  <!-- Dynamic / Offline Alert Container -->
+  <div id="formAlertContainer"></div>
+
+  <!-- Duplicate Detection Warning Container (Dynamic via JS) -->
+  <div id="duplicateAlertBox" style="display: none; margin-bottom: 1.25rem;"></div>
+
+  <!-- Server-rendered duplicate warning if submitted -->
+  {% if duplicate_warning %}
+  <div class="alert alert-warning">
+    <span class="alert-icon">⚠️</span>
+    <div style="flex: 1;">
+      <strong>Duplicate Notice:</strong> {{ duplicate_warning }}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-body">
+      <form id="emergencyRequestForm" action="/requests/create" method="POST">
+        {% if duplicate_warning %}
+        <input type="hidden" name="confirmed_duplicate" value="yes">
+        {% endif %}
+
+        <!-- Resource Select -->
+        <div class="form-group">
+          <label for="resource_id" class="form-label">Resource Needed <span class="required">*</span></label>
+          <select id="resource_id" name="resource_id" class="form-control" required autofocus>
+            <option value="" disabled {% if not form_data %}selected{% endif %}>-- Select Emergency Resource --</option>
+            {% for r in resources %}
+            <option value="{{ r.id }}" {% if form_data and form_data.resource_id == r.id %}selected{% endif %}>
+              [{{ r.category }}] {{ r.name }} &bull; Available in stock: {{ r.quantity_available }}
+            </option>
+            {% endfor %}
+          </select>
+          <span class="form-help">Select the primary item required for your relief station.</span>
+        </div>
+
+        <!-- Quantity & Urgency Grid -->
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="requested_quantity" class="form-label">Requested Quantity <span class="required">*</span></label>
+            <input
+              type="number"
+              id="requested_quantity"
+              name="requested_quantity"
+              class="form-control"
+              min="1"
+              step="1"
+              placeholder="e.g. 100"
+              value="{{ form_data.requested_quantity if form_data else '' }}"
+              required
+            >
+            <span class="form-help">Exact units needed immediately.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="urgency" class="form-label">Urgency Level <span class="required">*</span></label>
+            <select id="urgency" name="urgency" class="form-control" required>
+              <option value="Critical" {% if form_data and form_data.urgency == 'Critical' %}selected{% endif %}>
+                🚨 Critical (Life-threatening / Mass trauma)
+              </option>
+              <option value="High" {% if form_data and form_data.urgency == 'High' %}selected{% endif %}>
+                ⚠️ High (Severe deprivation / Rapid risk)
+              </option>
+              <option value="Medium" {% if (form_data and form_data.urgency == 'Medium') or not form_data %}selected{% endif %}>
+                🟡 Medium (Standard replenishment)
+              </option>
+              <option value="Low" {% if form_data and form_data.urgency == 'Low' %}selected{% endif %}>
+                ⚪ Low (Non-urgent buffer stock)
+              </option>
+            </select>
+            <span class="form-help">Determines algorithmic priority score.</span>
+          </div>
+        </div>
+
+        <!-- Location -->
+        <div class="form-group">
+          <label for="location" class="form-label">Affected Location / Delivery Destination <span class="required">*</span></label>
+          <input
+            type="text"
+            id="location"
+            name="location"
+            class="form-control"
+            placeholder="e.g. Shelter Camp Beta, High School Grounds, Sector 9"
+            value="{{ form_data.location if form_data else '' }}"
+            required
+          >
+          <span class="form-help">Provide specific relief camp, shelter, or checkpoint address.</span>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label for="description" class="form-label">Emergency Details & Affected Population</label>
+          <textarea
+            id="description"
+            name="description"
+            class="form-control"
+            rows="3"
+            placeholder="Specify number of affected people, vulnerable groups (children, elderly, injured), or special requirements..."
+          >{{ form_data.description if form_data else '' }}</textarea>
+          <span class="form-help">Keywords describing casualties, children, or elderly will elevate priority score.</span>
+        </div>
+
+        <!-- Submit Button -->
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;">
+          <a href="/requests" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary btn-lg">
+            {% if duplicate_warning %}Confirm & Submit Anyway{% else %}Submit Emergency Request{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

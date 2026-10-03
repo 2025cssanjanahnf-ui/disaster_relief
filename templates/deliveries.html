@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Deliveries & Transit Tracking - Disaster Relief{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Relief Deliveries & Transit Tracking</h1>
+    <p class="page-subtitle">Real-time status of dispatched relief convoys, vehicles, and supply drops</p>
+  </div>
+  <div class="page-actions">
+    <a href="/requests" class="btn btn-secondary">View Emergency Requests</a>
+  </div>
+</div>
+
+<!-- Search & Status Filter -->
+<form method="GET" action="/deliveries" class="filter-bar">
+  <div class="filter-group" style="flex: 1; min-width: 200px;">
+    <input
+      type="text"
+      name="q"
+      class="form-control"
+      placeholder="Search by driver, vehicle, or destination..."
+      value="{{ search_query }}"
+    >
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-label" for="status_filter">Delivery Status:</label>
+    <select name="status_filter" id="status_filter" class="form-control" onchange="this.form.submit()">
+      <option value="All" {% if selected_status == 'All' %}selected{% endif %}>All Deliveries</option>
+      {% for s in status_choices %}
+      <option value="{{ s }}" {% if selected_status == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <button type="submit" class="btn btn-secondary">Search</button>
+  {% if search_query or selected_status != 'All' %}
+  <a href="/deliveries" class="btn btn-secondary" title="Clear Filters">Clear</a>
+  {% endif %}
+</form>
+
+<!-- Deliveries Table -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Dispatches ({{ deliveries|length }})</h2>
+    <span style="font-size: 0.85rem; color: var(--color-text-subtle);">Active supply transport</span>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Req #</th>
+            <th>Resource & Qty</th>
+            <th>Destination Location</th>
+            <th>Driver / Relief Personnel</th>
+            <th>Vehicle</th>
+            <th>Status</th>
+            <th>Dispatched</th>
+            <th>Delivered</th>
+            {% if is_admin %}
+            <th style="text-align: right;">Update Status</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for deliv in deliveries %}
+          <tr>
+            <td>
+              <a href="/requests/{{ deliv.request_id }}" style="font-weight: 700;">#{{ deliv.request_id }}</a>
+            </td>
+            <td>
+              <strong>{{ deliv.resource.name }}</strong>
+              <div style="font-size: 0.75rem; color: var(--color-text-subtle);">
+                {{ deliv.request.requested_quantity }} units
+              </div>
+            </td>
+            <td>
+              📍 {{ deliv.request.location }}
+            </td>
+            <td>
+              👤 {{ deliv.assigned_to }}
+            </td>
+            <td>
+              🚚 {{ deliv.vehicle_details }}
+            </td>
+            <td>
+              <span class="badge badge-{{ 'delivered' if deliv.status == 'Delivered' else 'transit' if deliv.status == 'In Transit' else 'allocated' }}">
+                {{ deliv.status }}
+              </span>
+            </td>
+            <td style="font-size: 0.82rem; color: var(--color-text-muted);">
+              {{ deliv.assigned_at.strftime('%m-%d %H:%M') }}
+            </td>
+            <td style="font-size: 0.82rem; color: var(--color-text-muted);">
+              {% if deliv.delivered_at %}
+              {{ deliv.delivered_at.strftime('%m-%d %H:%M') }}
+              {% else %}
+              <span style="color: var(--color-text-subtle);">&mdash;</span>
+              {% endif %}
+            </td>
+            {% if is_admin %}
+            <td style="text-align: right;">
+              {% if deliv.status != 'Delivered' %}
+              <div style="display: inline-flex; gap: 0.35rem;">
+                {% if deliv.status == 'Assigned' %}
+                <form action="/deliveries/{{ deliv.id }}/status" method="POST" style="display: inline;">
+                  <input type="hidden" name="new_status" value="In Transit">
+                  <button type="submit" class="btn btn-secondary btn-sm" title="Mark vehicle in transit">
+                    In Transit
+                  </button>
+                </form>
+                {% endif %}
+                <form action="/deliveries/{{ deliv.id }}/status" method="POST" style="display: inline;">
+                  <input type="hidden" name="new_status" value="Delivered">
+                  <button
+                    type="submit"
+                    class="btn btn-success btn-sm"
+                    data-confirm="Confirm that supplies have been safely received at {{ deliv.request.location }}?"
+                    title="Confirm delivery completion"
+                  >
+                    Delivered
+                  </button>
+                </form>
+              </div>
+              {% else %}
+              <span style="color: var(--color-success); font-weight: 600; font-size: 0.82rem;">✓ Completed</span>
+              {% endif %}
+            </td>
+            {% endif %}
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" style="text-align: center; color: var(--color-text-subtle); padding: 2.5rem;">
+              No deliveries match the filter criteria.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Disaster Relief Resource Management{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div style="font-size: 2.2rem; line-height: 1;">📝</div>
+      <h1>Create Account</h1>
+      <p class="page-subtitle">Register to submit and track emergency relief requests</p>
+    </div>
+
+    <form action="/register" method="POST">
+      <div class="form-group">
+        <label for="username" class="form-label">Username <span class="required">*</span></label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          class="form-control"
+          placeholder="e.g. camp_coordinator_1"
+          value="{{ username or '' }}"
+          required
+          autofocus
+        >
+        <span class="form-help">Minimum 3 characters, alphanumeric.</span>
+      </div>
+
+      <div class="form-group">
+        <label for="role" class="form-label">Account Role <span class="required">*</span></label>
+        <select id="role" name="role" class="form-control" required>
+          <option value="REQUESTER" selected>Relief Center / Requester</option>
+          <option value="ADMIN">Disaster Response Administrator</option>
+        </select>
+        <span class="form-help">Select Requester for field teams and relief camps.</span>
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">Password <span class="required">*</span></label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          class="form-control"
+          placeholder="Enter secure password"
+          required
+        >
+        <span class="form-help">At least 6 characters.</span>
+      </div>
+
+      <div class="form-group">
+        <label for="confirm_password" class="form-label">Confirm Password <span class="required">*</span></label>
+        <input
+          type="password"
+          id="confirm_password"
+          name="confirm_password"
+          class="form-control"
+          placeholder="Re-enter password"
+          required
+        >
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top: 1rem;">
+        Register Account
+      </button>
+    </form>
+
+    <div style="margin-top: 1.5rem; text-align: center; font-size: 0.88rem; color: var(--color-text-muted);">
+      Already have an account? <a href="/login" style="font-weight: 600;">Sign in here</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
